@@ -46,12 +46,12 @@ pub fn process_withdraw(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
     ];
     let signers = [Signer::from(&signer_seeds)];
 
-    Transfer{
-        from:vault_account,
-        to:withdraw_account,
-        lamports:vault_account.lamports(),
-    }.invoke_signed(&signers)?;
+    Transfer {
+        from: vault_account,
+        to: withdraw_account,
+        lamports: vault_account.lamports(),
+    }
+    .invoke_signed(&signers)?;
 
     Ok(())
-
 }
