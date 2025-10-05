@@ -77,3 +77,56 @@ fn test_deposit() {
 
     assert!(deposit_res.program_result == ProgramResult::Success);
 }
+
+fn test_withdraw() {
+    let mollusk = mollusk();
+
+    let (system_program, system_account) = program::keyed_account_for_system_program();
+
+    let (vault_pda, bump) =
+        Pubkey::find_program_address(&[b"p-vault", &PAYER.to_bytes()], &PROGRAM);
+
+    let payer_account = Account::new(BASE_LAMPORTS, 0, &system_program);
+    let vault_account = Account::new(DEPOSIT_LAMPORTS, 0, &system_program);
+
+    let instruction_accounts = vec![
+        AccountMeta::new(PAYER, true),
+        AccountMeta::new(vault_pda, false),
+        AccountMeta::new_readonly(system_program, false),
+    ];
+
+    // Prepare instruction data.
+    let instruction_data = WithdrawInstructionData { bump };
+
+    // Discriminator for withdraw = 1.
+    let mut ser_instruction_data = vec![1];
+
+    // Serialize the instruction data.
+    ser_instruction_data.extend_from_slice(bytemuck::bytes_of(&instruction_data));
+
+    // Create instruction.
+    let instruction =
+        Instruction::new_with_bytes(PROGRAM, &ser_instruction_data, instruction_accounts);
+
+    // Create tx_accounts.
+    let tx_accounts = &vec![
+        (PAYER, payer_account.clone()),
+        (vault_pda, vault_account.clone()),
+        (system_program, system_account.clone()),
+    ];
+
+    // Run test.
+    let withdraw_res = mollusk.process_and_validate_instruction(
+        &instruction,
+        tx_accounts,
+        &[
+            Check::success(),
+            Check::account(&vault_pda).lamports(0).build(),
+            Check::account(&PAYER)
+                .lamports(BASE_LAMPORTS + DEPOSIT_LAMPORTS)
+                .build(),
+        ],
+    );
+
+    assert!(withdraw_res.program_result == ProgramResult::Success);
+}
